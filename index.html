@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>NFT Survivor — Global Persistent Arena</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #050505; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        
+        .bg-deep { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse at 50% 30%, #0a0a0a 0%, #020202 100%); z-index: -3; }
+        .energy-ripple { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -2; opacity: 0.1; }
+        .ripple { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255,106,0,0.08) 0%, rgba(255,106,0,0) 70%); animation: rippleDrift 24s infinite ease-in-out; }
+        @keyframes rippleDrift { 0% { transform: scale(0.8); opacity: 0; } 30% { opacity: 0.3; } 100% { transform: scale(2.5); opacity: 0; } }
+        
+        .glow-cloud { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: -2; animation: cloudDrift 35s infinite alternate; background: radial-gradient(circle, rgba(255,106,0,0.06) 0%, transparent 70%); }
+        @keyframes cloudDrift { 0% { transform: translate(0%, 0%) scale(1); opacity: 0.15; } 100% { transform: translate(5%, -5%) scale(1.15); opacity: 0.25; } }
+        
+        .particle { position: fixed; border-radius: 50%; pointer-events: none; z-index: -1; animation: floatParticle linear infinite; background: #ff6a00; }
+        @keyframes floatParticle { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 0.5; } 90% { opacity: 0.2; } 100% { transform: translateY(-200px) translateX(50px); opacity: 0; } }
+        
+        .light-sweep { position: fixed; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,106,0,0.06), transparent); pointer-events: none; z-index: 999; animation: lightSweep 22s infinite; }
+        @keyframes lightSweep { 0% { left: -100%; } 25% { left: 100%; } 100% { left: 100%; } }
+        
+        .premium-card { background: rgba(8, 10, 15, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255,106,0,0.25); border-radius: 28px; transition: all 0.3s ease; }
+        .premium-card:hover { border-color: rgba(255,106,0,0.5); box-shadow: 0 0 25px rgba(255,106,0,0.1); transform: translateY(-2px); }
+        
+        .crisp-btn { background: linear-gradient(135deg, rgba(255,106,0,0.15) 0%, rgba(255,106,0,0.05) 100%); border: 1px solid rgba(255,106,0,0.4); transition: all 0.3s ease; border-radius: 40px; font-weight: 600; color: #ffaa44; cursor: pointer; }
+        .crisp-btn:hover:not(:disabled) { background: linear-gradient(135deg, rgba(255,106,0,0.25) 0%, rgba(255,106,0,0.1) 100%); border-color: rgba(255,106,0,0.8); box-shadow: 0 0 15px rgba(255,106,0,0.2); transform: scale(1.02); }
+        .crisp-btn:active { transform: scale(0.98); }
+        .crisp-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        .glow-text-orange { text-shadow: 0 0 12px rgba(255,106,0,0.4); background: linear-gradient(135deg, #ff8c42, #ff5500); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .stat-pill { background: rgba(0, 0, 0, 0.55); border-radius: 20px; padding: 8px; text-align: center; border: 1px solid rgba(255,106,0,0.2); }
+        .player-row { background: rgba(0,0,0,0.5); border-radius: 18px; padding: 10px 14px; margin-bottom: 8px; border: 1px solid rgba(255,106,0,0.15); transition: all 0.2s; }
+        .player-row:hover { border-color: rgba(255,106,0,0.4); background: rgba(255,106,0,0.05); transform: translateX(4px); }
+        .log-line { border-left: 3px solid #ff6a00; padding-left: 12px; margin-bottom: 10px; font-size: 0.72rem; animation: fadeSlide 0.2s ease-out; }
+        @keyframes fadeSlide { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+        .prize-card { background: linear-gradient(135deg, rgba(255,106,0,0.1), rgba(0,0,0,0.6)); border: 1px solid rgba(255,106,0,0.35); border-radius: 20px; }
+        .nft-card { background: rgba(0,0,0,0.6); border-radius: 20px; padding: 12px; transition: all 0.2s; cursor: pointer; min-width: 100px; border: 1px solid rgba(255,106,0,0.2); }
+        .nft-card:hover { background: rgba(255,106,0,0.15); border-color: #ff6a00; transform: translateY(-4px); }
+        .nft-card img { width: 80px; height: 80px; margin: 0 auto; border-radius: 16px; object-fit: cover; }
+        .claim-btn { background: linear-gradient(135deg, #ff6a00, #ff4500); color: white; border: none; }
+        .claim-btn:hover { background: linear-gradient(135deg, #ff8833, #ff6622); transform: scale(1.02); }
+    </style>
+</head>
+<body>
+
+    <div class="bg-deep"></div>
+    <div class="energy-ripple" id="rippleContainer"></div>
+    <div class="glow-cloud" style="width: 500px; height: 500px; top: 10%; left: -10%;"></div>
+    <div class="glow-cloud" style="width: 600px; height: 600px; bottom: 0%; right: -10%; animation-duration: 45s;"></div>
+    <div class="light-sweep"></div>
+
+    <div class="max-w-lg mx-auto px-4 py-5 space-y-5 relative z-10">
+        <!-- Header -->
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-fire text-2xl" style="color: #ff6a00;"></i>
+                <h1 class="text-xl font-black glow-text-orange">NFT SURVIVOR</h1>
+                <span class="text-[9px] bg-orange-900/50 px-2 py-0.5 rounded-full">LIVE</span>
+            </div>
+            <div id="walletButtonContainer"></div>
+        </div>
+
+        <!-- Prize & Status -->
+        <div class="premium-card px-5 py-4">
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <div class="prize-card px-4 py-2">
+                    <div class="text-[10px] text-orange-400/80">🏆 PRIZE POOL</div>
+                    <div class="font-bold text-lg text-orange-400" id="prizePoolDisplay">0.00 SOL</div>
+                </div>
+                <div class="prize-card px-4 py-2">
+                    <div class="text-[10px] text-orange-400/80">🎲 JACKPOT</div>
+                    <div class="font-bold text-sm text-orange-300">1 / 1,000</div>
+                </div>
+                <div id="signedUpCount" class="text-xs bg-black/60 px-3 py-1 rounded-full">👥 0 fighters</div>
+            </div>
+        </div>
+
+        <!-- Timer & Phase -->
+        <div class="premium-card px-5 py-4">
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-hourglass-half" style="color: #ff6a00;"></i>
+                    <span id="roundPhase" class="font-bold text-orange-300">🌀 LOADING</span>
+                </div>
+                <div id="timerDisplay" class="text-xl font-mono font-bold text-orange-400 bg-black/50 px-4 py-1 rounded-full">--:--</div>
+                <div class="text-xs bg-orange-900/30 px-2 py-1 rounded-full">💰 0.01 SOL</div>
+            </div>
+        </div>
+
+        <!-- Join Panel -->
+        <div class="premium-card p-5 space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-sm text-orange-300"><i class="fas fa-skull" style="color: #ff6a00;"></i> Enter Arena</h2>
+                <button id="joinBtn" disabled class="crisp-btn px-5 py-2 rounded-full text-sm font-bold"><i class="fas fa-fist-raised"></i> PAY & JOIN</button>
+            </div>
+            <div id="nftGrid" class="flex gap-3 overflow-x-auto pb-2">
+                <div class="text-gray-500 text-xs p-4 bg-black/30 rounded-2xl">🔌 Connect wallet</div>
+            </div>
+            <div id="selectedPreview" class="hidden bg-black/50 rounded-2xl p-3 flex items-center gap-3">
+                <img id="previewImg" class="w-10 h-10 rounded-full object-cover border border-orange-500">
+                <span id="previewName" class="text-sm text-orange-200"></span>
+            </div>
+        </div>
+
+        <!-- Live Game -->
+        <div class="premium-card p-4">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-sm font-bold text-orange-300"><i class="fas fa-tower-broadcast" style="color: #ff6a00;"></i> ROUND <span id="roundNumber">0</span></span>
+                <span id="yourRoleBadge" class="text-[11px] bg-gray-800 px-3 py-1 rounded-full">👁️ SPECTATOR</span>
+            </div>
+            <div class="flex justify-between text-xs mb-3 bg-black/30 p-2 rounded-xl">
+                <span>📆 DAY <span id="currentDay" class="font-bold text-orange-400">0</span></span>
+                <span>💀 <span id="aliveCount">0</span> alive</span>
+            </div>
+            <div id="playerList" class="max-h-48 overflow-y-auto space-y-1.5 mb-3"></div>
+            <div id="logBox" class="h-48 overflow-y-auto text-[11px] bg-black/40 rounded-xl p-3 font-mono space-y-1"></div>
+        </div>
+
+        <!-- Personal Stats -->
+        <div id="personalCard" class="premium-card p-4 hidden">
+            <div class="flex justify-between items-center border-b border-orange-500/30 pb-2">
+                <span class="text-xs font-bold text-orange-300"><i class="fas fa-user-shield"></i> YOUR STATS</span>
+                <span id="personalStatus" class="text-[9px] bg-green-900/60 px-2 py-0.5 rounded-full">ACTIVE</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2 text-center text-[10px] mt-3">
+                <div class="stat-pill">⚔️ <span id="myAtk">0</span></div>
+                <div class="stat-pill">🛡️ <span id="myDef">0</span></div>
+                <div class="stat-pill">🍀 <span id="myLck">0</span></div>
+                <div class="stat-pill">👑 <span id="myLdr">0</span></div>
+                <div class="stat-pill col-span-2">🥫 <span id="mySup">0</span></div>
+                <div class="stat-pill">💀 <span id="myKill">0</span></div>
+            </div>
+        </div>
+
+        <!-- Claim Section -->
+        <div id="claimSection" class="premium-card p-4 hidden">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-orange-300"><i class="fas fa-gift"></i> PRIZE AVAILABLE!</span>
+                <button id="claimBtn" class="claim-btn px-4 py-1 rounded-full text-xs font-bold">CLAIM PRIZE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONFIGURATION ==========
+        const TREASURY_WALLET = "6rxen7BVVursWH2A1fQsmiRSKhDohsg5WF4sjAjwsgXx";
+        const PROFIT_WALLET = "ETVk2boWzCb3ofBbHYibbz96siVuyPsQSYwnv1ZCQShg";
+        const FEE_LAMPORTS = 0.01 * 1e9;
+        const HALF_FEE = FEE_LAMPORTS / 2;
+        
+        // Wallet & Connection
+        let walletPublicKey = null;
+        let connection = null;
+        let allNfts = [];
+        let selectedNft = null;
+        let hasPaid = false;
+        let HELIUS_KEY = "";
+        
+        // Game State (PERSISTENT via JSONBin)
+        let prizePool = 0;
+        let jackpotNumber = Math.floor(Math.random() * 1000) + 1;
+        let pendingWinner = null;
+        
+        let gameState = {
+            roundId: Date.now(),
+            phase: "signup",
+            signupEndsAt: Date.now() + 60000,
+            battleEndsAt: null,
+            day: 0,
+            active: false,
+            players: [],
+            logs: [],
+            playerStats: {}
+        };
+        
+        // AI Names
+        const AI_NAMES = ["Ronin", "Queen", "Prophet", "Ghoul", "Shaman", "Mutant", "Fox", "Maiden", "Beast", "Walker", "Raider", "Stalker", "Revenant", "Mongrel", "Wraith", "Collector", "Drifter", "Zealot", "Reaver", "Knight", "Hound", "Rat", "Oracle", "Jackal", "Giant", "Prophet", "Devil", "Hermit", "Pilgrim", "Witch"];
+        
+        // ========== HELIUS KEY ==========
+        async function getHeliusKey() {
+            try {
+                const res = await fetch("https://api.jsonbin.io/v3/b/6a1c618eddf5aa59f77c451e/latest");
+                const data = await res.json();
+                HELIUS_KEY = data.record?.helius_key || "";
+            } catch(e) { console.warn(e); }
+        }
+        
+        // ========== GLOBAL PERSISTENCE (JSONBin) ==========
+        const BIN_ID = "6a1c7d47ddf5aa59f77c8fd0";
+        const BIN_KEY = "$2a$10$fuiGumefGiykskrQtRN8Hee9mu5yyJg0ATX/xTeYd7WtUCNKmJc6S";
+        
+        async function loadGlobalState() {
+            try {
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                    headers: { "X-Master-Key": BIN_KEY }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.record?.gameState) {
+                        gameState = { ...gameState, ...data.record.gameState };
+                        prizePool = gameState.prizePool || 0;
+                        jackpotNumber = gameState.jackpotNumber || Math.floor(Math.random() * 1000) + 1;
+                        if (data.record.pendingWinner) pendingWinner = data.record.pendingWinner;
+                    }
+                }
+            } catch(e) { console.warn(e); }
+            updateUI();
+        }
+        
+        async function saveGlobalState() {
+            gameState.prizePool = prizePool;
+            gameState.jackpotNumber = jackpotNumber;
+            try {
+                const get = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+                    headers: { "X-Master-Key": BIN_KEY }
+                });
+                let existing = {};
+                if (get.ok) existing = await get.json();
+                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "X-Master-Key": BIN_KEY },
+                    body: JSON.stringify({ ...existing.record, gameState, pendingWinner })
+                });
+            } catch(e) { console.warn(e); }
+        }
+        
+        // ========== GAME LOGIC ==========
+        function addLog(msg, isErr = false) {
+            gameState.logs.unshift({ msg, isErr, time: Date.now() });
+            if (gameState.logs.length > 50) gameState.logs.pop();
+            saveGlobalState();
+            updateUI();
+        }
+        
+        function generateAIPlayers(count = 22) {
+            const ais = [];
+            for (let i = 0; i < count; i++) {
+                const name = AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)] + ` ${i+1}`;
+                ais.push({
+                    id: `ai_${Date.now()}_${i}`,
+                    name: name,
+                    imageUrl: `https://placehold.co/400x400/1a1a2a/ff6a00?text=${name[0]}`,
+                    attack: Math.floor(Math.random() * 35) + 10,
+                    defense: Math.floor(Math.random() * 30) + 8,
+                    luck: Math.floor(Math.random() * 35) + 8,
+                    supplies: Math.floor(Math.random() * 30) + 15,
+                    kills: 0, eliminated: false, isAI: true
+                });
+            }
+            return ais;
+        }
+        
+        function processBattleDay() {
+            if (gameState.phase !== "battle" || !gameState.active) return;
+            
+            let alive = gameState.players.filter(p => !p.eliminated);
+            if (alive.length <= 1) {
+                const winner = alive[0];
+                gameState.active = false;
+                gameState.phase = "ended";
+                if (winner) {
+                    addLog(`🏆 CHAMPION: ${winner.name} survived ${gameState.day} days!`, false);
+                    // Jackpot draw
+                    const roll = Math.floor(Math.random() * 1000) + 1;
+                    addLog(`🎲 JACKPOT ROLL: ${roll} | WIN #: ${jackpotNumber}`, false);
+                    if (roll === jackpotNumber && prizePool > 0) {
+                        addLog(`💰 JACKPOT! ${winner.name} wins ${(prizePool/1e9).toFixed(4)} SOL!`, false);
+                        pendingWinner = winner.id;
+                        prizePool = 0;
+                        if (winner.id === walletPublicKey?.toBase58()) {
+                            document.getElementById("claimSection").classList.remove("hidden");
+                        }
+                        jackpotNumber = Math.floor(Math.random() * 1000) + 1;
+                    }
+                    // Update stats
+                    if (!winner.isAI && winner.id !== "ai_") {
+                        if (!gameState.playerStats[winner.id]) gameState.playerStats[winner.id] = { wins: 0, losses: 0, name: winner.name };
+                        gameState.playerStats[winner.id].wins++;
+                    }
+                    alive.forEach(p => {
+                        if (!p.isAI && p !== winner && gameState.playerStats[p.id]) {
+                            gameState.playerStats[p.id].losses++;
+                        }
+                    });
+                }
+                saveGlobalState();
+                setTimeout(() => startNewRound(), 8000);
+                return;
+            }
+            
+            // Process each player
+            for (let p of alive) {
+                if (p.eliminated) continue;
+                // Scavenge
+                if (Math.random() < 0.3 + (p.luck / 100)) {
+                    let gain = Math.floor(Math.random() * 8) + 2;
+                    p.supplies += gain;
+                    addLog(`📦 ${p.name} +${gain} supplies`);
+                } else if (Math.random() < 0.2) {
+                    let loss = Math.floor(Math.random() * 6) + 1;
+                    p.supplies = Math.max(0, p.supplies - loss);
+                    addLog(`⚠️ ${p.name} -${loss} supplies`, true);
+                }
+                // Combat
+                if (alive.length > 1 && Math.random() < 0.15) {
+                    let others = alive.filter(o => o !== p);
+                    if (others.length) {
+                        let target = others[Math.floor(Math.random() * others.length)];
+                        let pPower = p.attack * 1.2 + p.defense * 0.5;
+                        let tPower = target.attack * 1.2 + target.defense * 0.5;
+                        if (pPower > tPower) {
+                            target.eliminated = true;
+                            p.kills++;
+                            addLog(`⚔️ ${p.name} eliminated ${target.name}!`, true);
+                        } else {
+                            p.eliminated = true;
+                            target.kills++;
+                            addLog(`⚔️ ${target.name} defeated ${p.name}!`, true);
+                        }
+                    }
+                }
+                // Starvation
+                if (p.supplies <= 0) {
+                    p.eliminated = true;
+                    addLog(`💀 ${p.name} starved`, true);
+                }
+                p.supplies = Math.min(99, p.supplies);
+            }
+            saveGlobalState();
+        }
+        
+        // ========== AUTO ROUND MANAGER ==========
+        let interval = null;
+        
+        function startGameLoop() {
+            if (interval) clearInterval(interval);
+            interval = setInterval(() => {
+                const now = Date.now();
+                
+                // Check phase transitions
+                if (gameState.phase === "signup" && now >= gameState.signupEndsAt) {
+                    gameState.phase = "battle";
+                    gameState.active = true;
+                    gameState.battleEndsAt = now + 120000;
+                    gameState.day = 0;
+                    // Add AI players
+                    const ais = generateAIPlayers(22);
+                    gameState.players = [...(gameState.players || []), ...ais];
+                    addLog(`🔒 SIGN-UP CLOSED! ${gameState.players.length} fighters enter (${ais.length} AI)`, false);
+                    saveGlobalState();
+                }
+                else if (gameState.phase === "battle" && now >= gameState.battleEndsAt) {
+                    const alive = gameState.players.filter(p => !p.eliminated);
+                    const winner = alive[0] || gameState.players[0];
+                    gameState.active = false;
+                    gameState.phase = "ended";
+                    if (winner) {
+                        addLog(`🏆 WINNER: ${winner.name} (${gameState.day} days)`, false);
+                        const roll = Math.floor(Math.random() * 1000) + 1;
+                        if (roll === jackpotNumber && prizePool > 0) {
+                            addLog(`💰 JACKPOT! ${winner.name} wins ${(prizePool/1e9).toFixed(4)} SOL!`, false);
+                            pendingWinner = winner.id;
+                            prizePool = 0;
+                            if (winner.id === walletPublicKey?.toBase58()) document.getElementById("claimSection").classList.remove("hidden");
+                            jackpotNumber = Math.floor(Math.random() * 1000) + 1;
+                        }
+                        if (!winner.isAI && gameState.playerStats[winner.id]) gameState.playerStats[winner.id].wins++;
+                    }
+                    saveGlobalState();
+                    setTimeout(() => startNewRound(), 8000);
+                }
+                else if (gameState.phase === "battle" && gameState.active) {
+                    const elapsed = now - gameState.signupEndsAt;
+                    const newDay = Math.floor(elapsed / 4800);
+                    if (newDay > gameState.day) {
+                        gameState.day = newDay;
+                        processBattleDay();
+                        saveGlobalState();
+                        updateUI();
+                    }
+                }
+                updateUI();
+            }, 1000);
+        }
+        
+        function startNewRound() {
+            gameState = {
+                roundId: Date.now(),
+                phase: "signup",
+                signupEndsAt: Date.now() + 60000,
+                battleEndsAt: null,
+                day: 0,
+                active: false,
+                players: [],
+                logs: gameState.logs || [],
+                playerStats: gameState.playerStats || {}
+            };
+            hasPaid = false;
+            document.getElementById("claimSection").classList.add("hidden");
+            saveGlobalState();
+            addLog("🕐 NEW ROUND! 60s to join (0.01 SOL)", false);
+            updateUI();
+        }
+        
+        // ========== JOIN WITH FEE ==========
+        async function joinGame() {
+            if (!walletPublicKey) { alert("Connect wallet first"); return; }
+            if (!selectedNft) { alert("Select an NFT"); return; }
+            if (gameState.phase !== "signup") { alert("Sign-ups closed"); return; }
+            if (gameState.players.find(p => p.id === walletPublicKey.toBase58())) { alert("Already joined"); return; }
+            
+            try {
+                const treasury = new solanaWeb3.PublicKey(TREASURY_WALLET);
+                const profit = new solanaWeb3.PublicKey(PROFIT_WALLET);
+                const tx = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({ fromPubkey: walletPublicKey, toPubkey: treasury, lamports: HALF_FEE }),
+                    solanaWeb3.SystemProgram.transfer({ fromPubkey: walletPublicKey, toPubkey: profit, lamports: HALF_FEE })
+                );
+                const { blockhash } = await connection.getLatestBlockhash();
+                tx.recentBlockhash = blockhash;
+                tx.feePayer = walletPublicKey;
+                const signed = await window.solana.signTransaction(tx);
+                const sig = await connection.sendRawTransaction(signed.serialize());
+                await connection.confirmTransaction(sig);
+                
+                prizePool += HALF_FEE;
+                updateUI();
+                
+                // Add player
+                const traits = selectedNft.traits || [];
+                let atk = 12, def = 10, lck = 10, ldr = 10;
+                traits.forEach(t => {
+                    let v = (t.value || "").toLowerCase();
+                    if (v.includes("laser")) atk += 8;
+                    if (v.includes("gold")) ldr += 7;
+                });
+                const player = {
+                    id: walletPublicKey.toBase58(),
+                    name: selectedNft.name,
+                    imageUrl: selectedNft.imageUrl,
+                    attack: Math.max(5, Math.min(48, atk + Math.floor(Math.random() * 7) - 3)),
+                    defense: Math.max(5, Math.min(42, def + Math.floor(Math.random() * 6) - 2)),
+                    luck: Math.max(5, Math.min(48, lck + Math.floor(Math.random() * 8) - 3)),
+                    supplies: 22 + Math.floor(Math.random() * 10),
+                    kills: 0, eliminated: false, isAI: false
+                };
+                gameState.players.push(player);
+                if (!gameState.playerStats[player.id]) {
+                    gameState.playerStats[player.id] = { wins: 0, losses: 0, name: player.name };
+                }
+                saveGlobalState();
+                addLog(`⚔️ ${selectedNft.name} joined!`, false);
+                updateUI();
+            } catch(e) { alert("Payment failed: " + e.message); }
+        }
+        
+        // ========== CLAIM PRIZE ==========
+        async function claimPrize() {
+            if (!walletPublicKey) return;
+            if (pendingWinner !== walletPublicKey.toBase58()) { alert("No prize for you"); return; }
+            if (prizePool <= 0) { alert("Prize pool empty"); return; }
+            try {
+                const winnerPub = new solanaWeb3.PublicKey(walletPublicKey);
+                const tx = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({ fromPubkey: new solanaWeb3.PublicKey(PROFIT_WALLET), toPubkey: winnerPub, lamports: prizePool })
+                );
+                const { blockhash } = await connection.getLatestBlockhash();
+                tx.recentBlockhash = blockhash;
+                tx.feePayer = walletPublicKey;
+                const signed = await window.solana.signTransaction(tx);
+                await connection.sendRawTransaction(signed.serialize());
+                addLog(`💰 Prize claimed! ${(prizePool/1e9).toFixed(4)} SOL sent`, false);
+                prizePool = 0;
+                pendingWinner = null;
+                document.getElementById("claimSection").classList.add("hidden");
+                saveGlobalState();
+                updateUI();
+            } catch(e) { alert("Claim failed: " + e.message); }
+        }
+        
+        // ========== NFT FETCH ==========
+        async function fetchNFTs(owner) {
+            if (!HELIUS_KEY) return demoNfts();
+            try {
+                const res = await fetch(`https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        jsonrpc: "2.0", method: "getAssetsByOwner",
+                        params: { ownerAddress: owner.toBase58(), page: 1, limit: 30, displayOptions: { showCollectionMetadata: true } }
+                    })
+                });
+                const data = await res.json();
+                return (data.result?.items || []).map(a => ({ mint: a.id, name: a.content?.metadata?.name || "NFT", imageUrl: a.content?.links?.image || "", traits: a.content?.metadata?.attributes || [] }));
+            } catch(e) { return demoNfts(); }
+        }
+        
+        function demoNfts() {
+            return [
+                { mint: "d1", name: "Neon Ape", imageUrl: "https://placehold.co/400x400/0a0a0a/ff6a00?text=APE", traits: [] },
+                { mint: "d2", name: "Cyber Panda", imageUrl: "https://placehold.co/400x400/0a0a0a/ff6a00?text=PANDA", traits: [] }
+            ];
+        }
+        
+        function renderNFTs(nfts) {
+            const grid = document.getElementById("nftGrid");
+            if (!nfts.length) { grid.innerHTML = '<div class="text-gray-400 text-xs p-4">No NFTs</div>'; return; }
+            grid.innerHTML = nfts.map((n, i) => `
+                <div class="nft-card flex-shrink-0 w-[100px] text-center cursor-pointer" data-idx="${i}">
+                    <img src="${n.imageUrl}" class="w-20 h-20 mx-auto rounded-xl object-cover">
+                    <span class="text-[10px] block mt-2">${n.name.slice(0,12)}</span>
+                </div>
+            `).join('');
+            document.querySelectorAll('.nft-card').forEach(el => {
+                el.addEventListener('click', () => {
+                    let idx = parseInt(el.dataset.idx);
+                    selectedNft = nfts[idx];
+                    document.getElementById("selectedPreview").classList.remove("hidden");
+                    document.getElementById("previewImg").src = selectedNft.imageUrl;
+                    document.getElementById("previewName").innerText = selectedNft.name;
+                    updateUI();
+                });
+            });
+        }
+        
+        // ========== UI UPDATE ==========
+        function updateUI() {
+            let remaining = 0;
+            if (gameState.phase === "signup") remaining = Math.max(0, Math.floor((gameState.signupEndsAt - Date.now()) / 1000));
+            else if (gameState.phase === "battle" && gameState.battleEndsAt) remaining = Math.max(0, Math.floor((gameState.battleEndsAt - Date.now()) / 1000));
+            document.getElementById("timerDisplay").innerHTML = `${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}`;
+            document.getElementById("roundPhase").innerHTML = gameState.phase === "signup" ? "📢 SIGN-UP" : (gameState.phase === "battle" ? "⚔️ BATTLE" : "🏁 ENDED");
+            document.getElementById("signedUpCount").innerHTML = `👥 ${gameState.players.length}`;
+            document.getElementById("currentDay").innerText = gameState.day;
+            document.getElementById("aliveCount").innerText = gameState.players.filter(p => !p.eliminated).length;
+            document.getElementById("roundNumber").innerText = Math.floor(gameState.roundId / 1000) % 10000;
+            document.getElementById("prizePoolDisplay").innerHTML = (prizePool / 1e9).toFixed(4) + " SOL";
+            
+            // Player list
+            const container = document.getElementById("playerList");
+            const sorted = [...gameState.players].sort((a,b) => (a.eliminated === b.eliminated) ? 0 : a.eliminated ? 1 : -1);
+            container.innerHTML = sorted.slice(0, 35).map(p => `
+                <div class="player-row ${p.eliminated ? 'opacity-50' : ''} ${p.id === walletPublicKey?.toBase58() ? 'border-orange-500 bg-orange-500/5' : ''}">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <img src="${p.imageUrl}" class="w-6 h-6 rounded-full object-cover">
+                            <span class="text-xs">${p.name.slice(0,18)}</span>
+                            ${p.id === walletPublicKey?.toBase58() ? '<span class="text-[9px] bg-orange-600 px-1.5 rounded-full">you</span>' : ''}
+                            ${p.isAI ? '<span class="text-[9px] bg-purple-600/40 px-1.5 rounded-full">AI</span>' : ''}
+                        </div>
+                        <div class="flex gap-2 text-[10px]">⚔️${p.attack} 🍀${p.luck} 🥫${p.supplies}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Logs
+            const logBox = document.getElementById("logBox");
+            logBox.innerHTML = (gameState.logs || []).slice(0, 40).map(l => `<div class="log-line ${l.isErr ? 'border-red-500 text-red-300' : ''}">${l.msg}</div>`).join('');
+            
+            // Personal
+            const my = gameState.players.find(p => p.id === walletPublicKey?.toBase58());
+            if (my && !my.isAI) {
+                document.getElementById("personalCard").classList.remove("hidden");
+                document.getElementById("myAtk").innerText = my.attack;
+                document.getElementById("myDef").innerText = my.defense;
+                document.getElementById("myLck").innerText = my.luck;
+                document.getElementById("myLdr").innerText = my.leadership;
+                document.getElementById("mySup").innerText = my.supplies;
+                document.getElementById("myKill").innerText = my.kills;
+                document.getElementById("yourRoleBadge").innerHTML = my.eliminated ? "💀 ELIMINATED" : "⚔️ FIGHTER";
+                document.getElementById("personalStatus").innerHTML = my.eliminated ? "ELIMINATED" : "ACTIVE";
+            } else {
+                document.getElementById("personalCard").classList.add("hidden");
+                document.getElementById("yourRoleBadge").innerHTML = "👁️ SPECTATOR";
+            }
+            
+            let canJoin = (gameState.phase === "signup" && walletPublicKey && selectedNft && !gameState.players.some(p => p.id === walletPublicKey?.toBase58()));
+            document.getElementById("joinBtn").disabled = !canJoin;
+        }
+        
+        // ========== WALLET CONNECT ==========
+        async function connectWallet() {
+            if (!window.solana?.isPhantom) { alert("Install Phantom"); window.open("https://phantom.app/"); return; }
+            try {
+                const resp = await window.solana.connect();
+                walletPublicKey = resp.publicKey;
+                connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com");
+                document.getElementById("walletButtonContainer").innerHTML = `<button class="bg-gray-800 text-orange-300 text-xs px-3 py-2 rounded-full">${walletPublicKey.toBase58().slice(0,4)}...${walletPublicKey.toBase58().slice(-4)}</button>`;
+                const nfts = await fetchNFTs(walletPublicKey);
+                allNfts = nfts;
+                renderNFTs(allNfts);
+                addLog(`🔐 Wallet connected`, false);
+                updateUI();
+            } catch(e) { alert("Connection failed"); }
+        }
+        
+        // ========== INIT ==========
+        async function init() {
+            await getHeliusKey();
+            await loadGlobalState();
+            startGameLoop();
+            document.getElementById("walletButtonContainer").innerHTML = `<button id="connectBtn" class="crisp-btn text-orange-300 text-xs font-bold px-3 py-2 rounded-full"><i class="fab fa-phantom"></i> Connect</button>`;
+            document.getElementById("connectBtn")?.addEventListener("click", connectWallet);
+            document.getElementById("joinBtn")?.addEventListener("click", joinGame);
+            document.getElementById("claimBtn")?.addEventListener("click", claimPrize);
+            
+            // Particles
+            for (let i = 0; i < 25; i++) {
+                let p = document.createElement('div');
+                p.className = 'particle';
+                p.style.width = (Math.random() * 3 + 1) + 'px';
+                p.style.height = p.style.width;
+                p.style.left = Math.random() * 100 + '%';
+                p.style.top = Math.random() * 100 + '%';
+                p.style.animationDuration = Math.random() * 20 + 15 + 's';
+                document.body.appendChild(p);
+            }
+            setInterval(() => {
+                let r = document.createElement('div');
+                r.className = 'ripple';
+                r.style.width = '250px';
+                r.style.height = '250px';
+                r.style.left = Math.random() * 80 + '%';
+                r.style.top = Math.random() * 80 + '%';
+                document.getElementById('rippleContainer')?.appendChild(r);
+                setTimeout(() => r.remove(), 15000);
+            }, 8000);
+        }
+        
+        init();
+    </script>
+</body>
+</html>
