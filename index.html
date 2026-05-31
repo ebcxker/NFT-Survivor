@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>NFT Survivor — Global Persistent Arena | Solana Pay</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+        body { background: #050505; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        
+        .bg-deep { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(ellipse at 50% 30%, #0a0a0a 0%, #020202 100%); z-index: -3; }
+        .energy-ripple { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -2; opacity: 0.12; }
+        .ripple { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255,106,0,0.1) 0%, rgba(255,106,0,0) 70%); animation: rippleDrift 24s infinite ease-in-out; }
+        @keyframes rippleDrift { 0% { transform: scale(0.8) translate(0%, 0%); opacity: 0; } 30% { opacity: 0.35; } 100% { transform: scale(2.5) translate(10%, -10%); opacity: 0; } }
+        
+        .glow-cloud { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: -2; animation: cloudDrift 35s infinite alternate ease-in-out; background: radial-gradient(circle, rgba(255,106,0,0.08) 0%, transparent 70%); }
+        @keyframes cloudDrift { 0% { transform: translate(0%, 0%) scale(1); opacity: 0.15; } 100% { transform: translate(5%, -5%) scale(1.15); opacity: 0.25; } }
+        
+        .particle { position: fixed; border-radius: 50%; pointer-events: none; z-index: -1; filter: blur(1px); animation: floatParticle linear infinite; background: radial-gradient(circle, #ff6a00 0%, transparent 100%); }
+        @keyframes floatParticle { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 0.6; } 90% { opacity: 0.3; } 100% { transform: translateY(-200px) translateX(50px); opacity: 0; } }
+        
+        .light-sweep { position: fixed; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(255,106,0,0.05) 40%, rgba(255,106,0,0.1) 50%, rgba(255,106,0,0.05) 60%, transparent 100%); pointer-events: none; z-index: 999; animation: lightSweep 22s infinite ease-in-out; }
+        @keyframes lightSweep { 0% { left: -100%; } 25% { left: 100%; } 100% { left: 100%; } }
+        
+        .premium-card { background: rgba(8, 10, 15, 0.88); backdrop-filter: blur(20px); border: 1px solid rgba(255,106,0,0.25); border-radius: 28px; transition: all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+        .premium-card:hover { border-color: rgba(255,106,0,0.55); box-shadow: 0 0 30px rgba(255,106,0,0.12); transform: translateY(-2px); }
+        
+        .crisp-btn { background: linear-gradient(135deg, rgba(255,106,0,0.12) 0%, rgba(255,106,0,0.04) 100%); border: 1px solid rgba(255,106,0,0.4); transition: all 0.3s ease; border-radius: 40px; font-weight: 600; color: #ffaa44; cursor: pointer; }
+        .crisp-btn:hover { background: linear-gradient(135deg, rgba(255,106,0,0.25) 0%, rgba(255,106,0,0.1) 100%); border-color: rgba(255,106,0,0.9); box-shadow: 0 0 20px rgba(255,106,0,0.25); transform: scale(1.02); color: #ffcc66; }
+        .crisp-btn:active { transform: scale(0.98); }
+        .crisp-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        
+        .glow-text-orange { text-shadow: 0 0 12px rgba(255,106,0,0.4); background: linear-gradient(135deg, #ff8c42 0%, #ff5500 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .stat-pill-premium { background: rgba(0, 0, 0, 0.55); border-radius: 20px; padding: 8px 8px; text-align: center; border: 1px solid rgba(255,106,0,0.2); transition: all 0.2s; }
+        .stat-pill-premium:hover { border-color: rgba(255,106,0,0.5); background: rgba(255,106,0,0.06); }
+        .player-row-premium { background: rgba(0,0,0,0.5); border-radius: 18px; padding: 10px 14px; margin-bottom: 8px; border: 1px solid rgba(255,106,0,0.15); transition: all 0.2s; }
+        .player-row-premium:hover { border-color: rgba(255,106,0,0.4); background: rgba(255,106,0,0.05); transform: translateX(4px); }
+        .log-line-orange { border-left: 3px solid #ff6a00; padding-left: 12px; margin-bottom: 10px; font-size: 0.72rem; animation: fadeSlide 0.2s ease-out; }
+        @keyframes fadeSlide { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+        .prize-card { background: linear-gradient(135deg, rgba(255,106,0,0.1) 0%, rgba(0, 0, 0, 0.6) 100%); border: 1px solid rgba(255,106,0,0.35); border-radius: 20px; }
+        .custom-cursor { width: 24px; height: 24px; border: 2px solid rgba(255,106,0,0.8); border-radius: 50%; position: fixed; pointer-events: none; z-index: 10000; transition: all 0.1s ease; transform: translate(-50%, -50%); backdrop-filter: blur(2px); }
+        .cursor-halo { width: 80px; height: 80px; border: 1px solid rgba(255,106,0,0.3); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9999; transition: all 0.15s ease; transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(255,106,0,0.08) 0%, rgba(255,106,0,0) 70%); }
+        
+        .nft-card-large { background: rgba(0,0,0,0.6); border-radius: 20px; padding: 12px; transition: all 0.2s; cursor: pointer; min-width: 100px; border: 1px solid rgba(255,106,0,0.2); }
+        .nft-card-large:hover { background: rgba(255,106,0,0.15); border-color: #ff6a00; transform: translateY(-4px); }
+        .nft-card-large img { width: 80px; height: 80px; margin: 0 auto; border-radius: 16px; object-fit: cover; }
+        
+        @media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+    </style>
+</head>
+<body>
+
+    <div class="bg-deep"></div>
+    <div class="energy-ripple" id="rippleContainer"></div>
+    <div class="glow-cloud" style="width: 500px; height: 500px; top: 10%; left: -10%;"></div>
+    <div class="glow-cloud" style="width: 600px; height: 600px; bottom: 0%; right: -10%; animation-duration: 45s;"></div>
+    <div class="light-sweep"></div>
+    <div class="custom-cursor" id="customCursor"></div>
+    <div class="cursor-halo" id="cursorHalo"></div>
+
+    <div class="max-w-lg mx-auto px-4 py-5 space-y-5 relative z-10">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-fire text-2xl" style="color: #ff6a00; filter: drop-shadow(0 0 8px rgba(255,106,0,0.6));"></i>
+                <h1 class="text-xl font-black glow-text-orange">NFT SURVIVOR</h1>
+                <span class="text-[9px] bg-orange-900/50 px-2 py-0.5 rounded-full">SOLANA GLOBAL</span>
+            </div>
+            <div id="walletButtonContainer"></div>
+        </div>
+
+        <div class="premium-card px-5 py-4">
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="prize-card px-4 py-2">
+                        <div class="text-[10px] text-orange-400/80">🏆 PRIZE POOL</div>
+                        <div class="font-bold text-lg text-orange-400" id="prizePoolDisplay">0.00 SOL</div>
+                    </div>
+                    <div class="prize-card px-4 py-2">
+                        <div class="text-[10px] text-orange-400/80">🎲 JACKPOT ODDS</div>
+                        <div class="font-bold text-sm text-orange-300">1 / 1,000</div>
+                    </div>
+                </div>
+                <div id="signedUpCount" class="text-xs bg-black/60 px-3 py-1 rounded-full text-orange-300">👥 0 fighters</div>
+            </div>
+            <div class="text-xs text-orange-400/60 mt-3 text-center bg-black/30 py-1 rounded-full">⚡ FULLY GLOBAL · Auto rounds · 0.01 SOL entry (0.005 treasury | 0.005 prize pool)</div>
+        </div>
+
+        <div class="premium-card px-5 py-4">
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <div class="flex items-center gap-2 text-sm font-medium">
+                    <i class="fas fa-hourglass-half" style="color: #ff6a00;"></i>
+                    <span id="roundPhase" class="font-bold text-orange-300">🌀 GLOBAL ARENA</span>
+                </div>
+                <div id="timerDisplay" class="text-xl font-mono font-bold" style="color: #ff6a00; background: #000000aa; border-radius: 60px; padding: 4px 16px;">--:--</div>
+                <div class="text-xs bg-orange-900/30 px-2 py-1 rounded-full text-orange-300">💰 Fee: 0.01 SOL</div>
+            </div>
+        </div>
+
+        <div id="joinPanel" class="premium-card p-5 space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-sm flex gap-2 text-orange-300"><i class="fas fa-skull" style="color: #ff6a00;"></i> Enter the Arena</h2>
+                <button id="joinBtn" disabled class="crisp-btn px-6 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2"><i class="fas fa-fist-raised"></i> PAY 0.01 SOL & JOIN</button>
+            </div>
+            <div id="walletHint" class="text-xs text-gray-400">Connect Phantom wallet & select your NFT champion</div>
+            
+            <div id="nftGrid" class="flex gap-4 overflow-x-auto pb-3">
+                <div class="text-gray-500 text-xs p-4 bg-black/30 rounded-2xl">🔌 Connect wallet to load NFTs</div>
+            </div>
+            
+            <div id="selectedPreview" class="hidden bg-black/50 rounded-2xl p-3 flex items-center gap-3">
+                <img id="previewImg" class="w-12 h-12 rounded-full object-cover border-2 border-orange-500">
+                <span id="previewName" class="text-sm font-mono text-orange-200"></span>
+                <span class="text-[10px]" style="color: #ff6a00;">✓ ready</span>
+            </div>
+        </div>
+
+        <div class="premium-card p-4">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-sm font-bold flex gap-2 text-orange-300"><i class="fas fa-tower-broadcast" style="color: #ff6a00;"></i> LIVE · ROUND <span id="roundNumber">—</span></span>
+                <span id="yourRoleBadge" class="text-[11px] bg-gray-800/80 px-3 py-1 rounded-full text-orange-200">👁️ SPECTATOR</span>
+            </div>
+            <div class="flex justify-between text-xs mb-3 bg-black/30 p-2 rounded-xl">
+                <span class="text-gray-300">📆 DAY <span id="currentDay" class="font-bold" style="color: #ff6a00;">0</span></span>
+                <span class="text-gray-300">💀 <span id="aliveCount">0</span> survivors</span>
+                <span class="text-gray-300"><i class="fas fa-coins" style="color: #ff6a00;"></i> <span id="coinEventBadge"></span></span>
+            </div>
+            <div id="playerListContainer" class="max-h-52 overflow-y-auto space-y-1.5 mb-4 pr-1"></div>
+            <div id="chronicleBox" class="h-48 overflow-y-auto text-[11px] bg-black/40 rounded-xl p-3 font-mono space-y-1"></div>
+        </div>
+
+        <div id="personalCard" class="premium-card p-4 hidden">
+            <div class="flex justify-between items-center border-b border-orange-500/30 pb-2">
+                <span class="text-xs font-bold text-orange-300"><i class="fas fa-user-shield" style="color: #ff6a00;"></i> YOUR SURVIVOR</span>
+                <span id="personalStatusBadge" class="text-[9px] bg-green-900/60 px-2 py-0.5 rounded-full text-green-300">IN ARENA</span>
+            </div>
+            <div class="grid grid-cols-4 gap-2 text-center text-[10px] mt-3">
+                <div class="stat-pill-premium text-gray-300">⚔️ ATK <span id="myAtk" class="block font-bold text-sm text-orange-300">0</span></div>
+                <div class="stat-pill-premium text-gray-300">🛡️ DEF <span id="myDef" class="block font-bold text-sm text-orange-300">0</span></div>
+                <div class="stat-pill-premium text-gray-300">🍀 LCK <span id="myLck" class="block font-bold text-sm text-orange-300">0</span></div>
+                <div class="stat-pill-premium text-gray-300">👑 LDR <span id="myLdr" class="block font-bold text-sm text-orange-300">0</span></div>
+                <div class="stat-pill-premium col-span-2 text-gray-300">🥫 SUPPLIES <span id="mySup" class="block font-bold text-sm text-orange-300">0</span></div>
+                <div class="stat-pill-premium text-gray-300">💀 KILLS <span id="myKill" class="block font-bold text-sm text-orange-300">0</span></div>
+                <div class="stat-pill-premium text-gray-300">🤝 ALLIES <span id="myAlly" class="block font-bold text-sm text-orange-300">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== GLOBALLY PERSISTENT CONFIGURATION ==========
+        const JSONBIN_BIN_ID = "6a1c7d47ddf5aa59f77c8fd0";
+        const JSONBIN_MASTER_KEY = "$2a$10$fuiGumefGiykskrQtRN8Hee9mu5yyJg0ATX/xTeYd7WtUCNKmJc6S";
+        const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+        
+        // Wallet Configuration - Direct addresses (not encoded for reliability)
+        const TREASURY_WALLET = "6rxen7BVVursWH2A1fQsmiRSKhDohsg5WF4sjAjwsgXx";
+        const PROFIT_WALLET = "ETVk2boWzCb3ofBbHYibbz96siVuyPsQSYwnv1ZCQShg";
+        const FEE_AMOUNT_LAMPORTS = 0.01 * 1e9;
+        const HALF_FEE_LAMPORTS = FEE_AMOUNT_LAMPORTS / 2;
+        
+        let prizePoolLamports = 0;
+        let currentJackpotNumber = Math.floor(Math.random() * 1000) + 1;
+        let walletPublicKey = null;
+        let connection = null;
+        let allNfts = [];
+        let selectedNft = null;
+        let hasPaidThisRound = false;
+        let HELIUS_API_KEY = "";
+        
+        let globalGameState = {
+            roundId: Date.now(),
+            phase: "signup",
+            signupEndsAt: Date.now() + 60000,
+            battleEndsAt: null,
+            day: 0,
+            gameActive: false,
+            players: [],
+            logs: [],
+            paidPlayers: [],
+            winner: null,
+            prizePool: 0,
+            jackpotNumber: currentJackpotNumber
+        };
+        
+        // ========== JSONBin Global Persistence ==========
+        async function loadGlobalStateFromBin() {
+            try {
+                const response = await fetch(`${JSONBIN_URL}/latest`, {
+                    headers: { "X-Master-Key": JSONBIN_MASTER_KEY }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.record && data.record.gameState) {
+                        const loaded = data.record.gameState;
+                        globalGameState = { ...globalGameState, ...loaded };
+                        prizePoolLamports = globalGameState.prizePool || 0;
+                        currentJackpotNumber = globalGameState.jackpotNumber || Math.floor(Math.random() * 1000) + 1;
+                        console.log("✅ Global state loaded");
+                    }
+                }
+            } catch(e) { console.warn(e); }
+            updatePrizeDisplay();
+            updateUI();
+        }
+        
+        async function saveGlobalStateToBin() {
+            globalGameState.prizePool = prizePoolLamports;
+            globalGameState.jackpotNumber = currentJackpotNumber;
+            try {
+                const getResponse = await fetch(`${JSONBIN_URL}/latest`, {
+                    headers: { "X-Master-Key": JSONBIN_MASTER_KEY }
+                });
+                let currentRecord = {};
+                if (getResponse.ok) currentRecord = await getResponse.json();
+                const updatedRecord = { ...currentRecord.record, gameState: globalGameState, lastUpdated: Date.now() };
+                await fetch(JSONBIN_URL, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "X-Master-Key": JSONBIN_MASTER_KEY },
+                    body: JSON.stringify(updatedRecord)
+                });
+            } catch(e) { console.error("Save failed:", e); }
+        }
+        
+        // ========== HELIUS API ==========
+        async function fetchHeliusKey() {
+            try {
+                const res = await fetch("https://api.jsonbin.io/v3/b/6a1c618eddf5aa59f77c451e/latest");
+                const data = await res.json();
+                HELIUS_API_KEY = data.record?.helius_key || data.helius_key || "";
+            } catch(e) { console.warn(e); }
+        }
+        
+        // ========== SOLANA SPLIT TRANSACTION ==========
+        async function paySplitFee() {
+            if (!walletPublicKey) { alert("Connect wallet first"); return false; }
+            if (hasPaidThisRound) return true;
+            
+            try {
+                const treasuryPubkey = new solanaWeb3.PublicKey(TREASURY_WALLET);
+                const profitPubkey = new solanaWeb3.PublicKey(PROFIT_WALLET);
+                
+                const transaction = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: walletPublicKey,
+                        toPubkey: treasuryPubkey,
+                        lamports: HALF_FEE_LAMPORTS
+                    }),
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: walletPublicKey,
+                        toPubkey: profitPubkey,
+                        lamports: HALF_FEE_LAMPORTS
+                    })
+                );
+                
+                const { blockhash } = await connection.getLatestBlockhash();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = walletPublicKey;
+                
+                const signed = await window.solana.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signed.serialize());
+                await connection.confirmTransaction(signature);
+                
+                prizePoolLamports += HALF_FEE_LAMPORTS;
+                updatePrizeDisplay();
+                hasPaidThisRound = true;
+                addGlobalLog(`✅ ${selectedNft?.name || "Player"} paid 0.01 SOL (0.005 treasury | 0.005 prize pool)`, false);
+                await saveGlobalStateToBin();
+                return true;
+            } catch (error) {
+                console.error("Payment failed:", error);
+                alert("Payment failed: " + error.message);
+                return false;
+            }
+        }
+        
+        function updatePrizeDisplay() {
+            const prizeSol = (prizePoolLamports / 1e9).toFixed(4);
+            document.getElementById("prizePoolDisplay").innerHTML = `${prizeSol} SOL`;
+        }
+        
+        // ========== JACKPOT DRAW ==========
+        async function drawJackpot(winnerWallet) {
+            if (!winnerWallet) return;
+            const randomNumber = Math.floor(Math.random() * 1000) + 1;
+            addGlobalLog(`🎲 JACKPOT DRAW: Rolled ${randomNumber} | Winning Number: ${currentJackpotNumber}`, false);
+            
+            if (randomNumber === currentJackpotNumber && prizePoolLamports > 0) {
+                const winAmount = prizePoolLamports;
+                addGlobalLog(`🏆💰🔥 JACKPOT HIT! ${winnerWallet.slice(0,8)}... wins ${(winAmount/1e9).toFixed(4)} SOL! 🔥💰🏆`, false);
+                prizePoolLamports = 0;
+                currentJackpotNumber = Math.floor(Math.random() * 1000) + 1;
+                updatePrizeDisplay();
+            } else {
+                addGlobalLog(`❌ No jackpot this round. Next winning number: ${currentJackpotNumber}`, false);
+                currentJackpotNumber = Math.floor(Math.random() * 1000) + 1;
+            }
+            await saveGlobalStateToBin();
+        }
+        
+        // ========== AUTO-ROUND MANAGEMENT ==========
+        let roundInterval = null;
+        
+        function startRoundManagement() {
+            if (roundInterval) clearInterval(roundInterval);
+            roundInterval = setInterval(async () => {
+                const now = Date.now();
+                
+                if (globalGameState.phase === "signup" && now >= globalGameState.signupEndsAt) {
+                    globalGameState.phase = "battle";
+                    globalGameState.gameActive = true;
+                    globalGameState.battleEndsAt = now + 120000;
+                    globalGameState.day = 0;
+                    addGlobalLog(`🔒 SIGN-UP CLOSED! ${globalGameState.players.length} warriors enter.`, false);
+                    await saveGlobalStateToBin();
+                }
+                else if (globalGameState.phase === "battle" && now >= globalGameState.battleEndsAt) {
+                    const alivePlayers = globalGameState.players.filter(p => !p.eliminated);
+                    const winner = alivePlayers.length > 0 ? alivePlayers[0] : (globalGameState.players[0] || null);
+                    globalGameState.winner = winner;
+                    globalGameState.phase = "ended";
+                    globalGameState.gameActive = false;
+                    
+                    if (winner) {
+                        addGlobalLog(`🏆 ROUND CHAMPION: ${winner.name} survived ${globalGameState.day} days!`, false);
+                        await drawJackpot(winner.id);
+                    } else {
+                        addGlobalLog(`💀 No survivors this round.`, true);
+                    }
+                    await saveGlobalStateToBin();
+                    setTimeout(() => { startNewRound(); }, 5000);
+                }
+                else if (globalGameState.phase === "battle" && globalGameState.gameActive) {
+                    const battleDuration = now - globalGameState.signupEndsAt;
+                    const newDay = Math.floor(battleDuration / 4800);
+                    if (newDay > globalGameState.day) {
+                        globalGameState.day = newDay;
+                        if (newDay > 0 && newDay % 5 === 0) {
+                            addGlobalLog(`⚔️ DAY ${newDay} — ${globalGameState.players.filter(p => !p.eliminated).length} survivors remain`, false);
+                        }
+                        const alive = globalGameState.players.filter(p => !p.eliminated);
+                        if (alive.length > 1 && Math.random() < 0.15) {
+                            const loser = alive[Math.floor(Math.random() * alive.length)];
+                            loser.eliminated = true;
+                            addGlobalLog(`💀 ${loser.name} was eliminated in combat!`, true);
+                        }
+                        await saveGlobalStateToBin();
+                    }
+                }
+                updateUI();
+            }, 1000);
+        }
+        
+        async function startNewRound() {
+            globalGameState = {
+                roundId: Date.now(),
+                phase: "signup",
+                signupEndsAt: Date.now() + 60000,
+                battleEndsAt: null,
+                day: 0,
+                gameActive: false,
+                players: [],
+                logs: [],
+                paidPlayers: [],
+                winner: null,
+                prizePool: prizePoolLamports,
+                jackpotNumber: currentJackpotNumber
+            };
+            hasPaidThisRound = false;
+            await saveGlobalStateToBin();
+            addGlobalLog("🕐 NEW ROUND! 60 seconds to join with 0.01 SOL fee.", false);
+            updateUI();
+        }
+        
+        // ========== JOIN WITH FEE ==========
+        async function joinWithFee() {
+            if (!walletPublicKey) { alert("Connect wallet first"); return; }
+            if (!selectedNft) { alert("Select an NFT first"); return; }
+            if (globalGameState.phase !== "signup") { alert("Sign-ups closed for this round!"); return; }
+            if (globalGameState.players.find(p => p.id === walletPublicKey.toBase58())) { alert("Already joined!"); return; }
+            
+            const feePaid = await paySplitFee();
+            if (!feePaid) { alert("Payment required. 0.01 SOL entry fee."); return; }
+            
+            const traits = selectedNft.traits || [];
+            let baseAttack = 12, baseDefense = 10, baseLuck = 10, baseLead = 10;
+            traits.forEach(t => {
+                const val = (t.value || "").toLowerCase();
+                if (val.includes("laser")) baseAttack += 8;
+                if (val.includes("gold")) baseLead += 7;
+                if (val.includes("rare")) { baseLuck += 6; baseDefense += 4; }
+            });
+            
+            const newPlayer = {
+                id: walletPublicKey.toBase58(),
+                name: selectedNft.name,
+                imageUrl: selectedNft.imageUrl,
+                attack: Math.max(5, Math.min(48, baseAttack + Math.floor(Math.random() * 7) - 3)),
+                defense: Math.max(5, Math.min(42, baseDefense + Math.floor(Math.random() * 6) - 2)),
+                luck: Math.max(5, Math.min(48, baseLuck + Math.floor(Math.random() * 8) - 3)),
+                leadership: Math.max(5, Math.min(45, baseLead + Math.floor(Math.random() * 6) - 2)),
+                supplies: 22 + Math.floor(Math.random() * 10),
+                kills: 0, alliances: 0, betrayals: 0, eliminated: false, alliancePartner: null
+            };
+            
+            globalGameState.players.push(newPlayer);
+            await saveGlobalStateToBin();
+            addGlobalLog(`⚔️ ${selectedNft.name} joined the arena!`, false);
+            updateUI();
+        }
+        
+        // ========== NFT FETCHING ==========
+        async function fetchNFTs(owner) {
+            if (!HELIUS_API_KEY) return demoNfts();
+            const url = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+            try {
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ jsonrpc: "2.0", method: "getAssetsByOwner", params: { ownerAddress: owner.toBase58(), page: 1, limit: 40, displayOptions: { showCollectionMetadata: true } } })
+                });
+                const data = await res.json();
+                const items = data.result?.items || [];
+                return items.map(asset => ({ mint: asset.id, name: asset.content?.metadata?.name || "Mystic Survivor", imageUrl: asset.content?.links?.image || "", traits: asset.content?.metadata?.attributes || [] }));
+            } catch(e) { return demoNfts(); }
+        }
+        
+        function demoNfts() {
+            return [
+                { mint: "demo1", name: "Neon Ape #204", imageUrl: "https://placehold.co/400x400/0a0a0a/ff6a00?text=NEON+APE", traits: [] },
+                { mint: "demo2", name: "Orange Panda", imageUrl: "https://placehold.co/400x400/0a0a0a/ff6a00?text=ORANGE+PANDA", traits: [] },
+                { mint: "demo3", name: "Cyber Wolf", imageUrl: "https://placehold.co/400x400/0a0a0a/ff6a00?text=CYBER+WOLF", traits: [] }
+            ];
+        }
+        
+        function renderNftSelector(nfts) {
+            const grid = document.getElementById("nftGrid");
+            if (!nfts.length) { grid.innerHTML = '<div class="text-gray-400 text-xs p-4 bg-black/30 rounded-2xl">No NFTs found</div>'; return; }
+            grid.innerHTML = nfts.map((nft, idx) => `
+                <div class="nft-card-large flex-shrink-0 w-[100px] text-center cursor-pointer" data-idx="${idx}">
+                    <img src="${nft.imageUrl || 'https://placehold.co/400x400/0a0a0a/ff6a00?text=NFT'}" class="w-20 h-20 mx-auto rounded-xl object-cover">
+                    <span class="text-[10px] block mt-2 font-medium text-gray-300">${nft.name.length > 14 ? nft.name.slice(0,12)+'..' : nft.name}</span>
+                </div>
+            `).join('');
+            document.querySelectorAll('.nft-card-large').forEach(el => {
+                el.addEventListener('click', () => {
+                    const idx = parseInt(el.dataset.idx);
+                    selectedNft = nfts[idx];
+                    document.getElementById("selectedPreview").classList.remove("hidden");
+                    document.getElementById("previewImg").src = selectedNft.imageUrl;
+                    document.getElementById("previewName").innerText = selectedNft.name;
+                    updateUI();
+                });
+            });
+        }
+        
+        function addGlobalLog(message, isError = false) {
+            globalGameState.logs.unshift({ message, isError, timestamp: Date.now() });
+            if (globalGameState.logs.length > 50) globalGameState.logs.pop();
+            saveGlobalStateToBin();
+            updateUI();
+        }
+        
+        function updateUI() {
+            const phaseNames = { signup: "📢 SIGN-UP OPEN", battle: "⚔️ BATTLE ACTIVE", ended: "🏁 ROUND ENDING" };
+            document.getElementById("roundPhase").innerHTML = phaseNames[globalGameState.phase] || "GLOBAL";
+            
+            let remaining = 0;
+            if (globalGameState.phase === "signup") remaining = Math.max(0, Math.floor((globalGameState.signupEndsAt - Date.now()) / 1000));
+            else if (globalGameState.phase === "battle" && globalGameState.battleEndsAt) remaining = Math.max(0, Math.floor((globalGameState.battleEndsAt - Date.now()) / 1000));
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            document.getElementById("timerDisplay").innerHTML = remaining > 0 ? `${mins}:${secs.toString().padStart(2,'0')}` : "00:00";
+            
+            document.getElementById("signedUpCount").innerHTML = `👥 ${globalGameState.players.length} fighters`;
+            document.getElementById("currentDay").innerText = globalGameState.day;
+            document.getElementById("aliveCount").innerText = globalGameState.players.filter(p => !p.eliminated).length;
+            document.getElementById("roundNumber").innerHTML = Math.floor(globalGameState.roundId / 1000) % 10000;
+            
+            const container = document.getElementById("playerListContainer");
+            const sorted = [...globalGameState.players].sort((a,b) => (a.eliminated === b.eliminated) ? 0 : a.eliminated ? 1 : -1);
+            container.innerHTML = sorted.map(p => `
+                <div class="player-row-premium ${p.eliminated ? 'opacity-50 grayscale' : ''} ${p.id === walletPublicKey?.toBase58() ? 'border-orange-500 bg-orange-500/5' : ''}">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2"><img src="${p.imageUrl || 'https://placehold.co/32x32'}" class="w-6 h-6 rounded-full object-cover"><span class="text-xs text-gray-200">${p.name.length > 18 ? p.name.slice(0,16)+'..' : p.name}</span>${p.id === walletPublicKey?.toBase58() ? '<span class="text-[9px] bg-orange-600/60 px-1.5 rounded-full text-white">you</span>' : ''}</div>
+                        <div class="flex gap-2 text-[10px] text-gray-300">⚔️${p.attack} 🍀${p.luck} 🥫${p.supplies}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            const logBox = document.getElementById("chronicleBox");
+            logBox.innerHTML = (globalGameState.logs || []).slice(0, 45).map(entry => `<div class="log-line-orange ${entry.isError ? 'border-red-500 text-red-300' : 'text-gray-300'}">${entry.message}</div>`).join('');
+            
+            const myPlayer = globalGameState.players.find(p => p.id === walletPublicKey?.toBase58());
+            if (myPlayer) {
+                document.getElementById("personalCard").classList.remove("hidden");
+                document.getElementById("myAtk").innerText = myPlayer.attack;
+                document.getElementById("myDef").innerText = myPlayer.defense;
+                document.getElementById("myLck").innerText = myPlayer.luck;
+                document.getElementById("myLdr").innerText = myPlayer.leadership;
+                document.getElementById("mySup").innerText = myPlayer.supplies;
+                document.getElementById("myKill").innerText = myPlayer.kills;
+                document.getElementById("myAlly").innerText = myPlayer.alliances;
+                document.getElementById("yourRoleBadge").innerHTML = myPlayer.eliminated ? "💀 ELIMINATED" : "⚔️ FIGHTER";
+            } else {
+                document.getElementById("personalCard").classList.add("hidden");
+                document.getElementById("yourRoleBadge").innerHTML = "👁️ SPECTATOR";
+            }
+            
+            const canJoin = (globalGameState.phase === "signup" && walletPublicKey && selectedNft && !globalGameState.players.some(p => p.id === walletPublicKey?.toBase58()));
+            document.getElementById("joinBtn").disabled = !canJoin;
+        }
+        
+        // ========== WALLET CONNECTION ==========
+        async function connectWallet() {
+            if (!window.solana || !window.solana.isPhantom) { 
+                alert("Please install Phantom wallet from https://phantom.app/"); 
+                window.open("https://phantom.app/", "_blank");
+                return; 
+            }
+            try {
+                const resp = await window.solana.connect();
+                walletPublicKey = resp.publicKey;
+                connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com", "confirmed");
+                
+                document.getElementById("walletButtonContainer").innerHTML = `<button class="bg-gray-800 text-orange-300 text-xs px-3 py-2 rounded-full flex items-center gap-2"><i class="fas fa-check-circle text-green-400"></i>${walletPublicKey.toBase58().slice(0,4)}...${walletPublicKey.toBase58().slice(-4)}</button>`;
+                
+                const nfts = await fetchNFTs(walletPublicKey);
+                allNfts = nfts;
+                renderNftSelector(allNfts);
+                addGlobalLog(`🔐 Wallet connected: ${walletPublicKey.toBase58().slice(0,8)}...`, false);
+                updateUI();
+            } catch(e) { 
+                console.error(e);
+                alert("Connection failed: " + e.message); 
+            }
+        }
+        
+        // ========== AMBIENT EFFECTS ==========
+        function createParticles() { for (let i = 0; i < 30; i++) { const p = document.createElement('div'); p.className = 'particle'; p.style.width = (Math.random() * 3 + 1) + 'px'; p.style.height = p.style.width; p.style.left = Math.random() * 100 + '%'; p.style.top = Math.random() * 100 + '%'; p.style.animationDuration = Math.random() * 20 + 15 + 's'; document.body.appendChild(p); } }
+        function createRipples() { setInterval(() => { const r = document.createElement('div'); r.className = 'ripple'; r.style.width = '300px'; r.style.height = '300px'; r.style.left = Math.random() * 80 + '%'; r.style.top = Math.random() * 80 + '%'; document.getElementById('rippleContainer').appendChild(r); setTimeout(() => r.remove(), 15000); }, 7000); }
+        
+        const cursor = document.getElementById('customCursor');
+        const halo = document.getElementById('cursorHalo');
+        document.addEventListener('mousemove', (e) => { if(cursor) cursor.style.left = e.clientX + 'px'; if(halo) halo.style.left = e.clientX + 'px'; if(cursor) cursor.style.top = e.clientY + 'px'; if(halo) halo.style.top = e.clientY + 'px'; });
+        
+        createParticles();
+        createRipples();
+        
+        // ========== INITIALIZATION ==========
+        fetchHeliusKey().then(async () => {
+            await loadGlobalStateFromBin();
+            startRoundManagement();
+            document.getElementById("walletButtonContainer").innerHTML = `<button id="connectBtn" class="crisp-btn text-orange-300 text-xs font-bold px-4 py-2 rounded-full transition-all"><i class="fab fa-phantom"></i> Connect Wallet</button>`;
+            document.getElementById("connectBtn")?.addEventListener("click", connectWallet);
+            document.getElementById("joinBtn")?.addEventListener("click", joinWithFee);
+        });
+    </script>
+</body>
+</html>
